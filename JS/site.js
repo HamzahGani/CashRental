@@ -10,71 +10,127 @@ var colorDarkBase = "#000";
 document.addEventListener("DOMContentLoaded", function () {
     buildHtml();
     calculator();
+    showHideModal(true); // TODO - remove after testing
 });
 // #endregion
 function calculator() {
+    var ratePerAnnum = 0.08; // fixed
     var ratePerMonth = 0.02; // fixed
     var nPer = 1; // fixed
     var nPerAnnuity = 12; // fixed
     var typeBegin = 1; // fixed
     var typeEnd = 0; // fixed
     var fV = 0; // fixed
-    submitButton();
-    function submitButton() {
-        var submitBtn = document.getElementById("submitBtn");
-        var InputPvAssetAcquired = document.getElementById("InputPvAssetAcquired");
-        var InputRate = document.getElementById("InputRate");
-        var InputRentalPeriodYears = document.getElementById("InputRentalPeriodYears");
-        var pvAssetAcquired = 0; // input
-        var rate = 0; // input - Annual interest rate = Discount rate
-        var rentalPeriodYears = 0; // input
-        var monthlyRentalPayment = 0; // calc
-        var n = rentalPeriodYears * nPerAnnuity; // calc
-        if (submitBtn == null) {
+    var pvAssetAcquired = 0; // input
+    var rate = 0; // input - Annual interest rate = Discount rate
+    var rentalPeriodYears = 0; // input
+    var monthlyRentalPayment = 0; // calc
+    var n = rentalPeriodYears * nPerAnnuity; // calc
+    var submitBtn = document.getElementById("submitBtn");
+    if (submitBtn == null) {
+        return;
+    }
+    submitBtn.onclick = function () {
+        if (!checkInputValues()) {
             return;
         }
-        submitBtn.onclick = function () {
-            checkInputValues();
-            var monthlyRentalPeriod;
-            try {
-                monthlyRentalPeriod = InputRentalPeriodYears.value * 12;
+        calcInputValues();
+        buildFooterSavingsTable();
+    };
+    function checkInputValues() {
+        var inputElements = document.getElementsByClassName("calcInput");
+        for (var i = 0; i < inputElements.length; i++) {
+            if (inputElements[i].value == null || inputElements[i].value == "") {
+                inputElements[i].classList.add("inputRed");
+                inputElements[i].classList.remove("inputGreen");
             }
-            catch (error) {
-                console.log(error);
-                monthlyRentalPeriod = 1;
+            else {
+                inputElements[i].classList.add("inputGreen");
+                inputElements[i].classList.remove("inputRed");
             }
-            //console.log("InputPvAssetAcquired: " + InputPvAssetAcquired.value);
-            //console.log("InputRate: " + InputRate.value);
-            //console.log("InputRentalPeriodMonths: " + monthlyRentalPeriod);
-        };
-        function checkInputValues() {
-            var inputElements = document.getElementsByClassName("calcInput");
-            for (var i = 0; i < inputElements.length; i++) {
-                if (inputElements[i].value == null || inputElements[i].value == "") {
-                    inputElements[i].classList.add("inputRed");
-                    inputElements[i].classList.remove("inputGreen");
-                }
-                else {
-                    inputElements[i].classList.add("inputGreen");
-                    inputElements[i].classList.remove("inputRed");
-                }
-            }
-            var redInputElements = document.getElementsByClassName("inputRed");
-            for (var i = 0; i < redInputElements.length; i++) {
-                var el = redInputElements[i].style;
-                el.borderColor = "red";
-            }
-            var greenInputElements = document.getElementsByClassName("inputGreen");
-            for (var i = 0; i < greenInputElements.length; i++) {
-                var el = greenInputElements[i].style;
-                el.borderColor = "green";
-            }
+        }
+        var redInputElements = document.getElementsByClassName("inputRed");
+        for (var i = 0; i < redInputElements.length; i++) {
+            var el = redInputElements[i].style;
+            el.borderColor = "red";
+        }
+        var greenInputElements = document.getElementsByClassName("inputGreen");
+        for (var i = 0; i < greenInputElements.length; i++) {
+            var el = greenInputElements[i].style;
+            el.borderColor = "green";
+        }
+        return redInputElements.length == 0 ? true : false;
+    }
+    function calcInputValues() {
+        rentalPeriodYears = document.getElementById("InputRentalPeriodYears").value;
+        pvAssetAcquired = document.getElementById("InputPvAssetAcquired").value;
+        rate = document.getElementById("InputRate").value;
+        var monthlyRentalPeriod;
+        try {
+            monthlyRentalPeriod = rentalPeriodYears * 12;
+        }
+        catch (error) {
+            console.log(error);
+            monthlyRentalPeriod = 1;
+        }
+        console.log("InputPvAssetAcquired: " + pvAssetAcquired);
+        console.log("InputRate: " + rate);
+        console.log("InputRentalPeriodMonths: " + monthlyRentalPeriod);
+    }
+    function buildFooterSavingsTable() {
+        var costsArr = [];
+        var losses = [];
+        var benefit = pvAssetAcquired * 0.20 * 0.27;
+        for (var i = 0; i < rentalPeriodYears; i++) {
+            costsArr.push(Math.round(pvAssetAcquired * (1 + (i / 10)) * -1));
+        }
+        var savingsTable = document.getElementById("modalFooter_savingsTable");
+        savingsTable.innerHTML = "";
+        var savingsTableRowHead = document.createElement("tr");
+        var savingsTableHeadColsList = ["Year", "Tax benfit", "Opportunity cost", "Cash flow"];
+        for (var i = 0; i < savingsTableHeadColsList.length; i++) {
+            var savingsTableHead = document.createElement("th");
+            savingsTableHead.innerHTML = savingsTableHeadColsList[i];
+            savingsTableRowHead.appendChild(savingsTableHead);
+            var el = savingsTableHead.style;
+            el.borderStyle = "solid";
+            el.borderWidth = "2px";
+            el.borderCollapse = "collapse";
+            el.width = "140px";
+        }
+        ;
+        savingsTable.appendChild(savingsTableRowHead);
+        var newRow = document.createElement("tr");
+        var colYear = document.createElement("td");
+        var colTaxBenefit = document.createElement("td");
+        var colOpportunityCost = document.createElement("td");
+        var colCashflow = document.createElement("td");
+        colYear.innerHTML = "0";
+        colTaxBenefit.innerHTML = "";
+        colOpportunityCost.innerHTML = "";
+        colCashflow.innerHTML = (-pvAssetAcquired).toString();
+        for (var i = 0; i < rentalPeriodYears; i++) {
+            var opportunityCost = costsArr[i];
+            losses.push(benefit + opportunityCost);
+            var newRow = document.createElement("tr");
+            var colYear = document.createElement("td");
+            var colTaxBenefit = document.createElement("td");
+            var colOpportunityCost = document.createElement("td");
+            var colCashflow = document.createElement("td");
+            colYear.innerHTML = (i + 1).toString();
+            colTaxBenefit.innerHTML = benefit.toString(); //(100).toString();
+            colOpportunityCost.innerHTML = opportunityCost; //(-200).toString();
+            colCashflow.innerHTML = losses[i];
+            newRow.appendChild(colYear);
+            newRow.appendChild(colTaxBenefit);
+            newRow.appendChild(colOpportunityCost);
+            newRow.appendChild(colCashflow);
+            savingsTable.appendChild(newRow);
         }
     }
 }
 function buildHtml() {
     setup();
-    showHideModal(true); // TODO - remove after testing
     function setup() {
         btnOpen();
         modalBackground();
@@ -203,7 +259,8 @@ function buildHtml() {
     }
     function modalContentMid() {
         var modalBody = document.createElement("div");
-        var bodyText = document.createElement("p");
+        var bodyHead = document.createElement("h3");
+        var bodyText = document.createElement("h4");
         var InputPvAssetAcquired = document.createElement("input");
         var InputRate = document.createElement("input");
         var InputRentalPeriodYears = document.createElement("input");
@@ -214,10 +271,11 @@ function buildHtml() {
         submitBtnStyle();
         function enable() {
             modalBody.id = "modalBody";
+            bodyHead.id = "modalBody_bodyHead";
             bodyText.id = "modalBody_bodyText";
-            bodyText.innerHTML = "Some text in the Modal Body";
-            bodyText.innerHTML += "<br />";
-            bodyText.innerHTML += "Some other text...";
+            bodyHead.innerHTML = "To calculate your cost savings";
+            modalBody.appendChild(bodyHead);
+            bodyText.innerHTML = 'Please fill in the below information and click "Calculate Savings"';
             modalBody.appendChild(bodyText);
             var modalContent = document.getElementById("modalContent");
             modalContent.appendChild(modalBody);
@@ -274,14 +332,24 @@ function buildHtml() {
     function modalContentBot() {
         var modalFooter = document.createElement("div");
         var footerText = document.createElement("h3");
+        var savingsTable = document.createElement("table");
         enable();
+        tableStyle();
         modalFooterTextStyle();
         modalFooterStyle();
+        function tableStyle() {
+            var el = savingsTable.style;
+            el.borderStyle = "solid";
+            el.borderWidth = "2px";
+            el.borderCollapse = "collapse";
+        }
         function enable() {
+            savingsTable.id = "modalFooter_savingsTable";
             modalFooter.id = "modalFooter";
             footerText.id = "modalFooter_footerText";
             footerText.innerHTML = "Savings";
             modalFooter.appendChild(footerText);
+            modalFooter.appendChild(savingsTable);
             var modalContent = document.getElementById("modalContent");
             modalContent.appendChild(modalFooter);
         }
@@ -293,6 +361,7 @@ function buildHtml() {
             var el = modalFooter.style;
             el.padding = "2px 16px";
             el.marginTop = "15px";
+            el.paddingBottom = "20px";
             el.backgroundColor = colorLightBase;
             el.borderTopStyle = "solid";
             el.borderTopWidth = "2px";
@@ -371,30 +440,30 @@ function buildHtml() {
             };
         }
     }
-    function showHideModal(show) {
-        var el = document.getElementById("modalBackground").style;
-        if (show) {
-            el.display = "block";
-        }
-        else {
-            el.display = "none";
-            resetInputs();
-        }
+}
+function showHideModal(show) {
+    var el = document.getElementById("modalBackground").style;
+    if (show) {
+        el.display = "block";
     }
-    function resetInputs() {
-        var InputPvAssetAcquired = document.getElementById("InputPvAssetAcquired");
-        var InputRate = document.getElementById("InputRate");
-        var InputRentalPeriodYears = document.getElementById("InputRentalPeriodYears");
-        InputPvAssetAcquired.value = "";
-        InputRate.value = "";
-        InputRentalPeriodYears.value = "";
-        var inputElements = document.getElementsByClassName("calcInput");
-        for (var i = 0; i < inputElements.length; i++) {
-            inputElements[i].classList.remove("inputRed");
-            inputElements[i].classList.remove("inputGreen");
-            inputElements[i].value = "";
-            inputElements[i].style.borderColor = colorLightBlue;
-        }
+    else {
+        el.display = "none";
+        resetInputs();
+    }
+}
+function resetInputs() {
+    var InputPvAssetAcquired = document.getElementById("InputPvAssetAcquired");
+    var InputRate = document.getElementById("InputRate");
+    var InputRentalPeriodYears = document.getElementById("InputRentalPeriodYears");
+    InputPvAssetAcquired.value = "";
+    InputRate.value = "";
+    InputRentalPeriodYears.value = "";
+    var inputElements = document.getElementsByClassName("calcInput");
+    for (var i = 0; i < inputElements.length; i++) {
+        inputElements[i].classList.remove("inputRed");
+        inputElements[i].classList.remove("inputGreen");
+        inputElements[i].value = "";
+        inputElements[i].style.borderColor = colorLightBlue;
     }
 }
 //# sourceMappingURL=site.js.map

@@ -1,34 +1,33 @@
 
-// #region Setup
-var body = document.body;
-var head = document.head;
-//var head = document.getElementsByTagName("head")[0];
-//var body = document.getElementsByTagName("body")[0];
+// #region Setup program constants
+const ratePerAnnum = 0.08; // fixed
+const ratePerMonth = 0.02; // fixed
+const nPer = 1; // fixed
+const nPerAnnuity = 12; // fixed
+const typeBegin = 1; // fixed
+const typeEnd = 0; // fixed
+const fV = 0; // fixed
 
-var colorLightBlue = "#206bc4";
-var colorDarkBlue = "#1d60b0";
-var colorLightBase = "#fff";
-var colorDarkBase = "#000";
+const body = document.body;
+const head = document.head;
+
+const colorLightBlue = "#206bc4";
+const colorDarkBlue = "#1d60b0";
+const colorLightBase = "#fff";
+const colorDarkBase = "#000";
+// #endregion
 
 document.addEventListener("DOMContentLoaded", () => {
     buildHtml();
     calculator();
     showHideModal(true); // TODO - remove after testing
 });
-// #endregion
 
 function calculator(){
-    var ratePerAnnum = 0.08; // fixed
-    var ratePerMonth = 0.02; // fixed
-    var nPer = 1; // fixed
-    var nPerAnnuity = 12; // fixed
-    var typeBegin = 1; // fixed
-    var typeEnd = 0; // fixed
-    var fV = 0; // fixed
-
     var pvAssetAcquired = 0; // input
     var rate = 0; // input - Annual interest rate = Discount rate
     var rentalPeriodYears = 0; // input
+    var rentalPeriodMonths; 
 
     var monthlyRentalPayment = 0; // calc
     var n = rentalPeriodYears * nPerAnnuity; // calc
@@ -37,71 +36,110 @@ function calculator(){
     if (submitBtn == null) { return; }
 
     submitBtn.onclick = function () {
+        document.getElementById("modalFooter_savingsTable").innerHTML = ""; // clear table
+        
         if (!checkInputValues()) { return; }
         calcInputValues();
         buildFooterSavingsTable();
     };
 
-    function checkInputValues(){
+    
+    function checkInputValues() {
         var inputElements: any = document.getElementsByClassName("calcInput");
-        for (let i = 0; i < inputElements.length; i++) {
-            if (inputElements[i].value == null || inputElements[i].value == "") {
-                inputElements[i].classList.add("inputRed");
-                inputElements[i].classList.remove("inputGreen");
-            } else {
-                inputElements[i].classList.add("inputGreen");
-                inputElements[i].classList.remove("inputRed");
+        for (let i = 0; i < inputElements.length; i++) 
+        {
+            var el = inputElements[i].value; 
+            var elClass = inputElements[i].classList;
+            
+            try
+            {
+                var val = parseFloat(el);
+                var remainder = 0;
+
+                if (document.getElementById("InputRentalPeriodYears") == inputElements[i])
+                {
+                    remainder = val%1;
+                }
+
+                if (Number.isNaN(val) || el == null || el == "" || el == "0" || remainder != 0) 
+                {
+                    elClass.add("inputRed");
+                    elClass.remove("inputGreen");
+                } 
+                else 
+                {
+                    elClass.add("inputGreen");
+                    elClass.remove("inputRed");
+                }
             }
+            catch (error)
+            {
+                elClass.add("inputRed");
+                elClass.remove("inputGreen");
+            }
+        } // test input
+
+        // apply styling to input (green / red border)
+        try 
+        {
+            var redInputElements: any = document.getElementsByClassName("inputRed");
+            for (let i = 0; i < redInputElements.length; i++) 
+            {
+                var el = redInputElements[i].style;
+                el.borderColor = "red";
+            }
+
+            var greenInputElements: any = document.getElementsByClassName("inputGreen");
+            for (let i = 0; i < greenInputElements.length; i++) 
+            {
+                var el = greenInputElements[i].style;
+                el.borderColor = "green";
+            } 
         }
-
-        var redInputElements: any = document.getElementsByClassName("inputRed");
-        for (let i = 0; i < redInputElements.length; i++) {
-            var el = redInputElements[i].style;
-            el.borderColor = "red";
+        catch (error)
+        {
+            return false;
         }
+        
+        return redInputElements.length == 0 ? true : false; // Return success / fail
+    } // input cannot be null, 0, or "". years must be int. rate and assetValue must be float
 
-        var greenInputElements: any = document.getElementsByClassName("inputGreen");
-        for (let i = 0; i < greenInputElements.length; i++) {
-            var el = greenInputElements[i].style;
-            el.borderColor = "green";
-        } 
-
-        return redInputElements.length == 0 ? true : false; 
-    }
-
-    function calcInputValues(){
+    function calcInputValues() {
         rentalPeriodYears = (document.getElementById("InputRentalPeriodYears") as any).value;
         pvAssetAcquired = (document.getElementById("InputPvAssetAcquired") as any).value;
         rate = (document.getElementById("InputRate") as any).value;
 
-        var monthlyRentalPeriod; 
-        try {
-            monthlyRentalPeriod = rentalPeriodYears * 12;
-        } catch (error) {
-            console.log(error);
-            monthlyRentalPeriod = 1;
+        try 
+        {
+            rentalPeriodMonths = rentalPeriodYears * 12;
+        } 
+        catch (error) 
+        {
+            rentalPeriodMonths = 1;
         }
         console.log("InputPvAssetAcquired: " + pvAssetAcquired);
         console.log("InputRate: " + rate);
-        console.log("InputRentalPeriodMonths: " + monthlyRentalPeriod);
+        console.log("InputRentalPeriodMonths: " + rentalPeriodMonths);
     }
 
-    function buildFooterSavingsTable(){
+    function buildFooterSavingsTable()
+    {
         var costsArr = [];
         var losses = [];
         var benefit = pvAssetAcquired * 0.20 * 0.27;
 
-        for (var i = 0; i<rentalPeriodYears; i++) {
+        for (var i = 0; i<rentalPeriodYears; i++) 
+        {
             costsArr.push(Math.round(pvAssetAcquired*(1+ (i/10))*-1));
         }
 
         var savingsTable = document.getElementById("modalFooter_savingsTable");
-        savingsTable.innerHTML = "";
         var savingsTableRowHead = document.createElement("tr");
 
         var savingsTableHeadColsList = ["Year", "Tax benfit", "Opportunity cost", "Cash flow"];
         
-        for (var i = 0; i < savingsTableHeadColsList.length; i++) {
+        for (var i = 0; i < savingsTableHeadColsList.length; i++) 
+        {
             var savingsTableHead = document.createElement("th");
             savingsTableHead.innerHTML = savingsTableHeadColsList[i];
             savingsTableRowHead.appendChild(savingsTableHead);
@@ -344,16 +382,19 @@ function buildHtml(){
             InputPvAssetAcquired.placeholder = "Purchase Value";
             InputPvAssetAcquired.title = "Purchase value of asset acquired";
             InputPvAssetAcquired.className = "calcInput";
+            InputPvAssetAcquired.type = "number";
 
             InputRate.id = "InputRate";
             InputRate.placeholder = "Rate of return";
             InputRate.title = "WACC ( Weighted ave cost of Capital, normal investors expected rate of return for the entity)";
             InputRate.className = "calcInput";
+            InputRate.type = "number";
 
             InputRentalPeriodYears.id = "InputRentalPeriodYears";
             InputRentalPeriodYears.placeholder = "rental period in years";
             InputRentalPeriodYears.title = "Number of years of rental payments";
             InputRentalPeriodYears.className = "calcInput";
+            InputRentalPeriodYears.type = "number";
 
             submitBtn.id = "submitBtn";
             submitBtn.innerHTML = "Calculate Savings"
@@ -422,8 +463,6 @@ function buildHtml(){
 
         function enable() {
             savingsTable.id = "modalFooter_savingsTable";
-
-            
 
             modalFooter.id = "modalFooter";
             footerText.id = "modalFooter_footerText";
@@ -542,7 +581,6 @@ function buildHtml(){
             }
         }
     }
-    
 }
 
 function showHideModal(show){

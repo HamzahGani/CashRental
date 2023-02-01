@@ -1,29 +1,28 @@
-// #region Setup
-var body = document.body;
-var head = document.head;
-//var head = document.getElementsByTagName("head")[0];
-//var body = document.getElementsByTagName("body")[0];
-var colorLightBlue = "#206bc4";
-var colorDarkBlue = "#1d60b0";
-var colorLightBase = "#fff";
-var colorDarkBase = "#000";
-document.addEventListener("DOMContentLoaded", function () {
+// #region Setup program constants
+const ratePerAnnum = 0.08; // fixed
+const ratePerMonth = 0.02; // fixed
+const nPer = 1; // fixed
+const nPerAnnuity = 12; // fixed
+const typeBegin = 1; // fixed
+const typeEnd = 0; // fixed
+const fV = 0; // fixed
+const body = document.body;
+const head = document.head;
+const colorLightBlue = "#206bc4";
+const colorDarkBlue = "#1d60b0";
+const colorLightBase = "#fff";
+const colorDarkBase = "#000";
+// #endregion
+document.addEventListener("DOMContentLoaded", () => {
     buildHtml();
     calculator();
     showHideModal(true); // TODO - remove after testing
 });
-// #endregion
 function calculator() {
-    var ratePerAnnum = 0.08; // fixed
-    var ratePerMonth = 0.02; // fixed
-    var nPer = 1; // fixed
-    var nPerAnnuity = 12; // fixed
-    var typeBegin = 1; // fixed
-    var typeEnd = 0; // fixed
-    var fV = 0; // fixed
     var pvAssetAcquired = 0; // input
     var rate = 0; // input - Annual interest rate = Discount rate
     var rentalPeriodYears = 0; // input
+    var rentalPeriodMonths;
     var monthlyRentalPayment = 0; // calc
     var n = rentalPeriodYears * nPerAnnuity; // calc
     var submitBtn = document.getElementById("submitBtn");
@@ -31,6 +30,7 @@ function calculator() {
         return;
     }
     submitBtn.onclick = function () {
+        document.getElementById("modalFooter_savingsTable").innerHTML = ""; // clear table
         if (!checkInputValues()) {
             return;
         }
@@ -39,43 +39,60 @@ function calculator() {
     };
     function checkInputValues() {
         var inputElements = document.getElementsByClassName("calcInput");
-        for (var i = 0; i < inputElements.length; i++) {
-            if (inputElements[i].value == null || inputElements[i].value == "") {
-                inputElements[i].classList.add("inputRed");
-                inputElements[i].classList.remove("inputGreen");
+        for (let i = 0; i < inputElements.length; i++) {
+            var el = inputElements[i].value;
+            var elClass = inputElements[i].classList;
+            try {
+                var val = parseFloat(el);
+                var remainder = 0;
+                if (document.getElementById("InputRentalPeriodYears") == inputElements[i]) {
+                    remainder = val % 1;
+                }
+                if (Number.isNaN(val) || el == null || el == "" || el == "0" || remainder != 0) {
+                    elClass.add("inputRed");
+                    elClass.remove("inputGreen");
+                }
+                else {
+                    elClass.add("inputGreen");
+                    elClass.remove("inputRed");
+                }
             }
-            else {
-                inputElements[i].classList.add("inputGreen");
-                inputElements[i].classList.remove("inputRed");
+            catch (error) {
+                elClass.add("inputRed");
+                elClass.remove("inputGreen");
+            }
+        } // test input
+        // apply styling to input (green / red border)
+        try {
+            var redInputElements = document.getElementsByClassName("inputRed");
+            for (let i = 0; i < redInputElements.length; i++) {
+                var el = redInputElements[i].style;
+                el.borderColor = "red";
+            }
+            var greenInputElements = document.getElementsByClassName("inputGreen");
+            for (let i = 0; i < greenInputElements.length; i++) {
+                var el = greenInputElements[i].style;
+                el.borderColor = "green";
             }
         }
-        var redInputElements = document.getElementsByClassName("inputRed");
-        for (var i = 0; i < redInputElements.length; i++) {
-            var el = redInputElements[i].style;
-            el.borderColor = "red";
+        catch (error) {
+            return false;
         }
-        var greenInputElements = document.getElementsByClassName("inputGreen");
-        for (var i = 0; i < greenInputElements.length; i++) {
-            var el = greenInputElements[i].style;
-            el.borderColor = "green";
-        }
-        return redInputElements.length == 0 ? true : false;
-    }
+        return redInputElements.length == 0 ? true : false; // Return success / fail
+    } // input cannot be null, 0, or "". years must be int. rate and assetValue must be float
     function calcInputValues() {
         rentalPeriodYears = document.getElementById("InputRentalPeriodYears").value;
         pvAssetAcquired = document.getElementById("InputPvAssetAcquired").value;
         rate = document.getElementById("InputRate").value;
-        var monthlyRentalPeriod;
         try {
-            monthlyRentalPeriod = rentalPeriodYears * 12;
+            rentalPeriodMonths = rentalPeriodYears * 12;
         }
         catch (error) {
-            console.log(error);
-            monthlyRentalPeriod = 1;
+            rentalPeriodMonths = 1;
         }
         console.log("InputPvAssetAcquired: " + pvAssetAcquired);
         console.log("InputRate: " + rate);
-        console.log("InputRentalPeriodMonths: " + monthlyRentalPeriod);
+        console.log("InputRentalPeriodMonths: " + rentalPeriodMonths);
     }
     function buildFooterSavingsTable() {
         var costsArr = [];
@@ -85,7 +102,6 @@ function calculator() {
             costsArr.push(Math.round(pvAssetAcquired * (1 + (i / 10)) * -1));
         }
         var savingsTable = document.getElementById("modalFooter_savingsTable");
-        savingsTable.innerHTML = "";
         var savingsTableRowHead = document.createElement("tr");
         var savingsTableHeadColsList = ["Year", "Tax benfit", "Opportunity cost", "Cash flow"];
         for (var i = 0; i < savingsTableHeadColsList.length; i++) {
@@ -283,14 +299,17 @@ function buildHtml() {
             InputPvAssetAcquired.placeholder = "Purchase Value";
             InputPvAssetAcquired.title = "Purchase value of asset acquired";
             InputPvAssetAcquired.className = "calcInput";
+            InputPvAssetAcquired.type = "number";
             InputRate.id = "InputRate";
             InputRate.placeholder = "Rate of return";
             InputRate.title = "WACC ( Weighted ave cost of Capital, normal investors expected rate of return for the entity)";
             InputRate.className = "calcInput";
+            InputRate.type = "number";
             InputRentalPeriodYears.id = "InputRentalPeriodYears";
             InputRentalPeriodYears.placeholder = "rental period in years";
             InputRentalPeriodYears.title = "Number of years of rental payments";
             InputRentalPeriodYears.className = "calcInput";
+            InputRentalPeriodYears.type = "number";
             submitBtn.id = "submitBtn";
             submitBtn.innerHTML = "Calculate Savings";
             var divElements = document.createElement("div");
@@ -310,7 +329,7 @@ function buildHtml() {
         }
         function inputStyle() {
             var inputElements = document.getElementsByClassName("calcInput");
-            for (var i = 0; i < inputElements.length; i++) {
+            for (let i = 0; i < inputElements.length; i++) {
                 var el = inputElements[i].style;
                 el.fontSize = "16px";
                 el.marginBottom = "10px";
@@ -376,13 +395,13 @@ function buildHtml() {
         function submitButton() {
             var submitBtn = document.getElementById("submitBtn");
             var el = submitBtn.style;
-            submitBtn.addEventListener('mouseenter', function (e) {
+            submitBtn.addEventListener('mouseenter', (e) => {
                 el.color = colorLightBlue;
                 el.textDecoration = 'none';
                 el.backgroundColor = "white";
                 el.borderStyle = "solid";
             });
-            submitBtn.addEventListener('mouseleave', function (e) {
+            submitBtn.addEventListener('mouseleave', (e) => {
                 el.color = 'white';
                 el.borderStyle = "none";
                 el.backgroundColor = colorLightBlue;
@@ -397,13 +416,13 @@ function buildHtml() {
                 showHideModal(true);
             };
             var el = openBtn.style;
-            openBtn.addEventListener('mouseenter', function (e) {
+            openBtn.addEventListener('mouseenter', (e) => {
                 el.color = colorLightBlue;
                 el.textDecoration = 'none';
                 el.backgroundColor = "white";
                 el.borderStyle = "solid";
             });
-            openBtn.addEventListener('mouseleave', function (e) {
+            openBtn.addEventListener('mouseleave', (e) => {
                 el.color = 'white';
                 el.borderStyle = "none";
                 el.backgroundColor = colorLightBlue;
@@ -418,14 +437,14 @@ function buildHtml() {
                 showHideModal(false);
             };
             var el = closeBtn.style;
-            closeBtn.addEventListener('mouseenter', function (e) {
+            closeBtn.addEventListener('mouseenter', (e) => {
                 el.backgroundColor = colorLightBlue;
                 el.color = colorLightBase;
                 el.borderStyle = "solid";
                 el.borderColor = colorLightBase;
                 el.textDecoration = 'none';
             });
-            closeBtn.addEventListener('mouseleave', function (e) {
+            closeBtn.addEventListener('mouseleave', (e) => {
                 el.color = colorLightBlue;
                 el.backgroundColor = colorLightBase;
                 el.borderStyle = "none";
@@ -459,7 +478,7 @@ function resetInputs() {
     InputRate.value = "";
     InputRentalPeriodYears.value = "";
     var inputElements = document.getElementsByClassName("calcInput");
-    for (var i = 0; i < inputElements.length; i++) {
+    for (let i = 0; i < inputElements.length; i++) {
         inputElements[i].classList.remove("inputRed");
         inputElements[i].classList.remove("inputGreen");
         inputElements[i].value = "";

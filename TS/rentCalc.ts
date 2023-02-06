@@ -1,12 +1,14 @@
 
 // #region Setup program constants
-const ratePerAnnum = 0.08; // fixed
+const ratePerAnnum = 0.0775; // fixed
 const ratePerMonth = 0.02; // fixed
 const nPer = 1; // fixed
 const nPerAnnuity = 12; // fixed
 const typeBegin = 1; // fixed
 const typeEnd = 0; // fixed
 const fV = 0; // fixed
+const benfitPercent = 0.20 * 0.27; // fixed
+const savingsTableHeadColsList = ["Year", "Tax benfit", "Opportunity cost", "Cash flow"]; // fixed
 
 const body = document.body;
 const head = document.head;
@@ -21,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     buildHtml();
     calculator();
     showHideModal(true); // TODO - remove after testing
+    initInput(); // TODO - remove afterr testing
 });
 
 function calculator(){
@@ -29,21 +32,33 @@ function calculator(){
     var rentalPeriodYears = 0; // input
     var rentalPeriodMonths; 
 
+    var benefit = 0; // calc
     var monthlyRentalPayment = 0; // calc
     var n = rentalPeriodYears * nPerAnnuity; // calc
-    
+
+    var costsArr = [];
+    var costsValuationArr = [];
+    var losses = [];
+    var costNperArr = [];
+    var benefitNperArr = [];
+
     var submitBtn = document.getElementById("submitBtn");
-    if (submitBtn == null) { return; }
+    if (submitBtn != null) { 
+        submitBtn.onclick = function () {
+            document.getElementById("modalFooter_savingsTable").innerHTML = ""; // clear table
+            costsValuationArr = [];
+            costsArr = [];
+            losses = [];
+            costNperArr = [];
+            benefitNperArr = [];
+            
+            if (!checkInputValues()) { return; }
+            calcInputValues();
+            buildFooterSavingsTable();
+            styleSavingsTable();
+        };
+    }
 
-    submitBtn.onclick = function () {
-        document.getElementById("modalFooter_savingsTable").innerHTML = ""; // clear table
-        
-        if (!checkInputValues()) { return; }
-        calcInputValues();
-        buildFooterSavingsTable();
-    };
-
-    
     function checkInputValues() {
         var inputElements: any = document.getElementsByClassName("calcInput");
         for (let i = 0; i < inputElements.length; i++) 
@@ -53,31 +68,40 @@ function calculator(){
             
             try
             {
+                var passed = true;
                 var val = parseFloat(el);
-                var remainder = 0;
+
+                if (Number.isNaN(val) || el == null || el == "" || el == "0") {
+                    passed = false;
+                } // value must be a number (float or int)
 
                 if (document.getElementById("InputRentalPeriodYears") == inputElements[i])
                 {
-                    remainder = val%1;
-                }
+                    var remainder = val%1;
+                    if (remainder > 0 || el > 5) {
+                        passed = false;
+                    }
+                } // years must be int and 5 or less
 
-                if (Number.isNaN(val) || el == null || el == "" || el == "0" || remainder != 0) 
+                if (!passed) 
                 {
                     elClass.add("inputRed");
                     elClass.remove("inputGreen");
-                } 
+                } // add class inputRed
                 else 
                 {
-                    elClass.add("inputGreen");
+                    elClass.add("inputGreen"); 
                     elClass.remove("inputRed");
-                }
+                } // add class inputGreen
+
+                
             }
             catch (error)
             {
                 elClass.add("inputRed");
                 elClass.remove("inputGreen");
             }
-        } // test input
+        } // test inputs (add red / green borders)
 
         // apply styling to input (green / red border)
         try 
@@ -105,87 +129,162 @@ function calculator(){
     } // input cannot be null, 0, or "". years must be int. rate and assetValue must be float
 
     function calcInputValues() {
-        rentalPeriodYears = (document.getElementById("InputRentalPeriodYears") as any).value;
-        pvAssetAcquired = (document.getElementById("InputPvAssetAcquired") as any).value;
-        rate = (document.getElementById("InputRate") as any).value;
-
         try 
         {
+            rentalPeriodYears = (document.getElementById("InputRentalPeriodYears") as any).value;
+            pvAssetAcquired = (document.getElementById("InputPvAssetAcquired") as any).value;
+            rate = (document.getElementById("InputRate") as any).value;
+
+            benefit = Math.round(pvAssetAcquired * benfitPercent);
             rentalPeriodMonths = rentalPeriodYears * 12;
+            
+            costsValuationArr.push(pvAssetAcquired);
+            console.log("pvAssetAcquired: " + pvAssetAcquired);
+
+            for (var i = 0; i < rentalPeriodYears; i ++) {
+                var opportunityCost = Math.round(parseInt(costsValuationArr[i]) * ratePerAnnum);
+                var totalWithGrowth = Math.round(parseInt(costsValuationArr[i]) + opportunityCost);
+                
+                costsArr.push(opportunityCost);
+                costsValuationArr.push(totalWithGrowth);
+                console.log("opportunityCost: " + opportunityCost);
+                //console.log("totalWithGrowth: " + totalWithGrowth);
+
+                var costCashflow = pvCalc(rate, i+1, 0, opportunityCost); // rate, nper, payment, fv, type
+                costNperArr.push(costCashflow);
+                console.log("costCashFlow: " + costCashflow);
+
+                losses.push(Math.round(benefit - opportunityCost));
+
+
+            }
+            
+            //logInputs();
         } 
         catch (error) 
         {
             rentalPeriodMonths = 1;
         }
-        console.log("InputPvAssetAcquired: " + pvAssetAcquired);
-        console.log("InputRate: " + rate);
-        console.log("InputRentalPeriodMonths: " + rentalPeriodMonths);
+        
     }
 
-    function buildFooterSavingsTable()
-    {
-        var costsArr = [];
-        var losses = [];
-        var benefit = pvAssetAcquired * 0.20 * 0.27;
+    function styleSavingsTable() {
+        var savingsTable = document.getElementById("modalFooter_savingsTable");
+        //savingsTable.style.textAlign = "center";
 
-        for (var i = 0; i<rentalPeriodYears; i++) 
+        var savingsTableRowHead = document.getElementById("savingsTableRowHead");
+        //savingsTableRowHead.style.textAlign = "center";
+
+        var savingsTableHeaders = document.getElementsByClassName("savingsTableHead");
+
+        for (var i = 0; i < savingsTableHeaders.length; i++) 
         {
-            costsArr.push(Math.round(pvAssetAcquired*(1+ (i/10))*-1));
-        }
+            var savingsTableHead: any = savingsTableHeaders[i];
+            var el = savingsTableHead.style;
+            el.borderStyle = "solid";
+            el.borderWidth = "1px";
+            el.borderCollapse = "collapse";
+            el.width = "80px";
+            el.textAlign = "center";
+            el.paddingRight = "10px";
+            el.paddingLeft = "10px";
+        }; // style savings table headings
 
+        var savingTableBodyList = document.getElementsByClassName("savingsTableBody");
+        for (var i = 0; i < savingTableBodyList.length; i++) {
+            var savingsTableHead: any = savingTableBodyList[i];
+            var el = savingsTableHead.style;
+            el.borderStyle = "solid";
+            el.borderWidth = "1px";
+            el.borderCollapse = "collapse";
+            //el.width = "80px";
+            el.textAlign = "center";
+            el.paddingRight = "10px";
+            el.paddingLeft = "10px";
+        }
+    }
+
+    function buildFooterSavingsTable() {
         var savingsTable = document.getElementById("modalFooter_savingsTable");
         var savingsTableRowHead = document.createElement("tr");
-
-        var savingsTableHeadColsList = ["Year", "Tax benfit", "Opportunity cost", "Cash flow"];
+        savingsTableRowHead.id = "savingsTableRowHead";
         
         for (var i = 0; i < savingsTableHeadColsList.length; i++) 
         {
             var savingsTableHead = document.createElement("th");
+            savingsTableHead.classList.add("savingsTableHead");
             savingsTableHead.innerHTML = savingsTableHeadColsList[i];
             savingsTableRowHead.appendChild(savingsTableHead);
-
-            var el = savingsTableHead.style;
-            el.borderStyle = "solid";
-            el.borderWidth = "2px";
-            el.borderCollapse = "collapse";
-            el.width = "140px";
-        };
+        }; // build savings table headings
 
         savingsTable.appendChild(savingsTableRowHead);
 
-        var newRow = document.createElement("tr");
-        var colYear = document.createElement("td");
-        var colTaxBenefit = document.createElement("td");
-        var colOpportunityCost = document.createElement("td");
-        var colCashflow = document.createElement("td");
+        buildTableFirstRow();
 
-        colYear.innerHTML = "0";
-        colTaxBenefit.innerHTML = "";
-        colOpportunityCost.innerHTML = "";
-        colCashflow.innerHTML = (-pvAssetAcquired).toString();
-
-        for (var i = 0; i<rentalPeriodYears; i++) {
-            var opportunityCost = costsArr[i];
-            losses.push(benefit + opportunityCost);
-
+        buildTableBody(); 
+        
+        function buildTableFirstRow(){
             var newRow = document.createElement("tr");
             var colYear = document.createElement("td");
             var colTaxBenefit = document.createElement("td");
             var colOpportunityCost = document.createElement("td");
             var colCashflow = document.createElement("td");
 
-            colYear.innerHTML = (i+1).toString();
-            colTaxBenefit.innerHTML = benefit.toString(); //(100).toString();
-            colOpportunityCost.innerHTML = opportunityCost; //(-200).toString();
-            colCashflow.innerHTML = losses[i];
+            colYear.innerHTML = "0";
+            colYear.classList.add("savingsTableBody");
+            
+            colTaxBenefit.innerHTML = "";
+            colTaxBenefit.classList.add("savingsTableBody");
 
+            colOpportunityCost.innerHTML = "";
+            colOpportunityCost.classList.add("savingsTableBody");
+
+            colCashflow.innerHTML = (-pvAssetAcquired).toString();
+            colCashflow.classList.add("savingsTableBody");
+            
             newRow.appendChild(colYear);
             newRow.appendChild(colTaxBenefit);
             newRow.appendChild(colOpportunityCost);
             newRow.appendChild(colCashflow);
-
             savingsTable.appendChild(newRow);
         }
+
+        function buildTableBody(){
+            for (var i = 0; i<rentalPeriodYears; i++) {
+                
+
+                var newRow = document.createElement("tr");
+                newRow.classList.add("savingsTableBodyRow");
+
+                var colYear = document.createElement("td");
+                colYear.innerHTML = Math.round((i+1)).toString();
+                colYear.classList.add("savingsTableBody");
+
+                var colTaxBenefit = document.createElement("td");
+                colTaxBenefit.innerHTML = benefit.toString(); 
+                colTaxBenefit.classList.add("savingsTableBody");
+
+                var colOpportunityCost = document.createElement("td");
+                colOpportunityCost.innerHTML = costsArr[i];
+                colOpportunityCost.classList.add("savingsTableBody");
+
+                var colCashflow = document.createElement("td");
+                colCashflow.innerHTML = losses[i];
+                colCashflow.classList.add("savingsTableBody");
+
+                newRow.appendChild(colYear);
+                newRow.appendChild(colTaxBenefit);
+                newRow.appendChild(colOpportunityCost);
+                newRow.appendChild(colCashflow);
+                savingsTable.appendChild(newRow);
+            }
+        }
+    }
+
+    function logInputs() {
+        console.log("InputPvAssetAcquired: " + pvAssetAcquired);
+        console.log("InputRate: " + rate);
+        console.log("InputRentalPeriodMonths: " + rentalPeriodMonths);
     }
 }
 
@@ -597,10 +696,12 @@ function resetInputs(){
     var InputPvAssetAcquired:any = document.getElementById("InputPvAssetAcquired");
     var InputRate: any = document.getElementById("InputRate");
     var InputRentalPeriodYears: any = document.getElementById("InputRentalPeriodYears");
+    var modalFooter_savingsTable: any = document.getElementById("modalFooter_savingsTable");
 
     InputPvAssetAcquired.value = "";
     InputRate.value = "";
     InputRentalPeriodYears.value = "";
+    modalFooter_savingsTable.innerHTML = ""; // clear table
 
     var inputElements: any = document.getElementsByClassName("calcInput");
     for (let i = 0; i < inputElements.length; i++) {
@@ -611,3 +712,61 @@ function resetInputs(){
     }
 
 }
+
+function initInput() {
+    var pvInput: any = document.getElementById("InputPvAssetAcquired");
+    pvInput.value = "1800000";
+
+    var pvInput: any = document.getElementById("InputRate");
+    pvInput.value = "21";
+
+    var pvInput: any = document.getElementById("InputRentalPeriodYears");
+    pvInput.value = "5";
+}
+
+// This function is from David Goodman's Javascript Bible.
+function conv_number(expr, decplaces) {
+    var str = "" + Math.round(eval(expr) * Math.pow(10,decplaces));
+    while (str.length <= decplaces) {
+      str = "0" + str;
+    }
+    
+    var decpoint = str.length - decplaces;
+    var returning = (str.substring(0,decpoint) + "." + str.substring(decpoint,str.length))
+    console.log("conv_number: "+ returning);
+    return returning;
+  }
+  
+  // Parameters are rate, total number of periods, payment made each period and future value
+function pvCalc(rate, nper, pmt, fv) {
+    var pv_value, x, y = 0;
+
+    rate = parseFloat(rate);
+    //rate = rate/100;
+    nper = parseFloat(nper);
+    pmt = parseFloat(pmt);
+    fv = parseFloat(fv);
+
+    console.log("pvCalc rate: "+ rate);
+    console.log("pvCalc nper: "+ nper);
+    console.log("pvCalc pmt: "+ pmt);
+    console.log("pvCalc fv: "+ fv);
+
+    if ( nper == 0 ) {
+      alert("Why do you want to test me with zeros?");
+      return(0);       
+    }
+    if ( rate == 0 ) { // Interest rate is 0
+      pv_value = -(fv + (pmt * nper));
+      console.log("pv_value a: "+ pv_value);
+
+    } else {
+      x = Math.pow(1 + rate, -nper); 
+      y = Math.pow(1 + rate, nper);
+      pv_value = - ( x * ( fv * rate - pmt + y * pmt )) / rate;
+      console.log("pv_value b: "+ pv_value);
+    }
+    pv_value = conv_number(pv_value,2);
+    console.log("pv_value c: "+ pv_value);
+    return (pv_value);
+  }

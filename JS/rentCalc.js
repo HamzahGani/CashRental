@@ -587,30 +587,31 @@ function conv_number(expr, decplaces) {
 function pvCalc(rate, nper, pmt, fv) {
     var pv_value, x, y = 0;
     rate = parseFloat(rate);
-    //rate = rate/100;
+    rate = rate / 100;
+    //rate = rate/1;
     nper = parseFloat(nper);
     pmt = parseFloat(pmt);
     fv = parseFloat(fv);
-    console.log("pvCalc rate: " + rate);
-    console.log("pvCalc nper: " + nper);
-    console.log("pvCalc pmt: " + pmt);
-    console.log("pvCalc fv: " + fv);
+    //console.log("pvCalc rate: "+ rate);
+    //console.log("pvCalc nper: "+ nper);
+    //console.log("pvCalc pmt: "+ pmt);
+    //console.log("pvCalc fv: "+ fv);
     if (nper == 0) {
         alert("Why do you want to test me with zeros?");
         return (0);
     }
     if (rate == 0) { // Interest rate is 0
         pv_value = -(fv + (pmt * nper));
-        console.log("pv_value a: " + pv_value);
+        //console.log("pv_value a: "+ pv_value);
     }
     else {
         x = Math.pow(1 + rate, -nper);
         y = Math.pow(1 + rate, nper);
         pv_value = -(x * (fv * rate - pmt + y * pmt)) / rate;
-        console.log("pv_value b: " + pv_value);
+        //console.log("pv_value b: "+ pv_value);
     }
     pv_value = conv_number(pv_value, 2);
-    console.log("pv_value c: " + pv_value);
+    //console.log("pv_value c: "+ pv_value);
     return (pv_value);
 }
 //# sourceMappingURL=rentCalc.js.map
